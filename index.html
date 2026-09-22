@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Oracle Patch & Sub-Doc Extractor</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col p-3 sm:p-6 pb-20">
+
+  <!-- Header -->
+  <header class="max-w-2xl mx-auto w-full mb-4 flex items-center justify-between">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white">Oracle Extractor</h1>
+        <p class="text-xs text-slate-400">Patches & Sub-Docs Engine</p>
+      </div>
+    </div>
+    <span class="px-2.5 py-1 text-[11px] font-semibold tracking-wider uppercase rounded-full bg-sky-950 text-sky-400 border border-sky-800/60">
+      Hybrid Mode
+    </span>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-2xl mx-auto w-full flex-1 flex flex-col space-y-4">
+    
+    <!-- Input Card -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <div class="flex items-center justify-between mb-2">
+        <label for="inputText" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Paste Advisory Text</label>
+        <div class="flex items-center space-x-2">
+          <button id="pasteBtn" type="button" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg flex items-center space-x-1 font-medium border border-slate-700">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>Paste</span>
+          </button>
+          <button id="clearBtn" type="button" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg font-medium border border-slate-700">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <textarea 
+        id="inputText" 
+        rows="6" 
+        placeholder="Paste document text here (e.g. KB873521, Patch 28710912, Note:854428.1)..." 
+        class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent font-mono transition-all resize-y"
+      ></textarea>
+
+      <!-- Action Button -->
+      <button 
+        id="extractBtn" 
+        type="button" 
+        class="w-full mt-3 py-3 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 active:scale-[0.99] text-white font-semibold rounded-xl shadow-lg shadow-sky-600/30 flex items-center justify-center space-x-2 transition-all"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span>Extract Patches & Sub-Docs</span>
+      </button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden space-y-3">
+      
+      <!-- Top Bar with Copy All -->
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Extracted Results</span>
+        <button id="copyAllBtn" type="button" class="text-xs px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg shadow flex items-center space-x-1.5 transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+          </svg>
+          <span>Copy Full Report</span>
+        </button>
+      </div>
+
+      <!-- 1. Main Doc Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-md">
+        <div>
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Main Doc</span>
+          <div id="mainDocDisplay" class="text-base font-bold text-sky-400 font-mono mt-0.5">None identified</div>
+        </div>
+        <button id="copyMainDocBtn" class="copy-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center space-x-1">
+          <span>Copy</span>
+        </button>
+      </div>
+
+      <!-- 2. Patches Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Patches</span>
+            <span id="patchesCountBadge" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-sky-950 text-sky-300 border border-sky-800/80">0</span>
+          </div>
+          <button id="copyPatchesBtn" class="copy-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center space-x-1">
+            <span>Copy</span>
+          </button>
+        </div>
+        <div id="patchesDisplay" class="text-xs font-mono text-slate-200 bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 break-words leading-relaxed max-h-36 overflow-y-auto">
+          None found
+        </div>
+      </div>
+
+      <!-- 3. Sub Docs (KB) Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Sub Docs (KB)</span>
+            <span id="kbCountBadge" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80">0</span>
+          </div>
+          <button id="copyKbBtn" class="copy-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center space-x-1">
+            <span>Copy</span>
+          </button>
+        </div>
+        <div id="kbDisplay" class="text-xs font-mono text-emerald-200 bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 break-words leading-relaxed max-h-36 overflow-y-auto">
+          None found
+        </div>
+      </div>
+
+      <!-- 4. Sub Docs (MOS) Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Sub Docs (MOS)</span>
+            <span id="mosCountBadge" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/80">0</span>
+          </div>
+          <button id="copyMosBtn" class="copy-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center space-x-1">
+            <span>Copy</span>
+          </button>
+        </div>
+        <div id="mosDisplay" class="text-xs font-mono text-indigo-200 bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 break-words leading-relaxed max-h-36 overflow-y-auto">
+          None found
+        </div>
+      </div>
+
+      <!-- Preview Raw Format -->
+      <details class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs">
+        <summary class="cursor-pointer font-semibold text-slate-400 hover:text-slate-200 select-none">
+          View Raw Option 2 Output Text
+        </summary>
+        <pre id="rawReportDisplay" class="mt-2.5 p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-300 whitespace-pre-wrap overflow-x-auto"></pre>
+      </details>
+
+    </div>
+
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-800/95 border border-sky-500/50 text-sky-200 text-xs font-semibold rounded-full shadow-2xl backdrop-blur opacity-0 pointer-events-none transition-all duration-300 flex items-center space-x-1.5">
+    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+    </svg>
+    <span id="toastMsg">Copied to clipboard!</span>
+  </div>
+
+  <!-- Client-side Extraction Engine (0ms instant execution) -->
+  <script>
+    const IGNORE_PREFIXES = [
+      "AES", "SEED", "GOST", "DES", "RSA", "SHA", "MD5",
+      "JAN", "FEB", "MAR", "APR", "MAY", "JUN", 
+      "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+      "JANUARY", "FEBRUARY", "MARCH", "APRIL", "JUNE", 
+      "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+      "CPU", "CPUOCT", "CPUJUL", "CPUAPR", "CPUJAN",
+      "ORA", "PLS", "JDK", "SLES", "RHEL", "LNX", "BP", "UEK", "ORACORE",
+      "BUG", "XMS", "XMX", "XMN", "XSS"
+    ];
+
+    function runHybridExtraction(text) {
+      if (!text || !text.trim()) {
+        return null;
+      }
+
+      // 1. Detect Main Document
+      let mainDoc = null;
+      const firstKbMatch = text.slice(0, 500).match(/(?<!\d\.)(?<![A-Za-z0-9_])([A-Za-z]{2,10}\d{2,10})(?!\.\d)(?![A-Za-z0-9_])/);
+      if (firstKbMatch) {
+        const cand = firstKbMatch[1].toUpperCase();
+        if (!IGNORE_PREFIXES.some(p => cand.startsWith(p))) {
+          mainDoc = cand;
+        }
+      }
+
+      // 2. Extract Sub Docs (MOS - .1 to .9)
+      const mosRegex = /(?<!\d\.)(?<![A-Za-z0-9_])(\d{3,8}\.[1-9])(?:[A-Za-z*+!#~%^&|/\\?-]+)?(?!\.\d)/g;
+      const mosCounts = {};
+      let mMatch;
+      while ((mMatch = mosRegex.exec(text)) !== null) {
+        const doc = mMatch[1];
+        mosCounts[doc] = (mosCounts[doc] || 0) + 1;
+      }
+
+      // 3. Extract Sub Docs (KB / Alphanumeric)
+      const kbRegex = /(?<!\d\.)(?<![A-Za-z0-9_])([A-Za-z]{2,12}\d{2,10})(?:[A-Za-z*+!#~%^&|/\\?-]+)?(?!\.\d)(?![0-9_])/g;
+      const kbSubdocs = [];
+      let kbMatch;
+      while ((kbMatch = kbRegex.exec(text)) !== null) {
+        let token = kbMatch[1].toUpperCase();
+        for (const prep of ["IN", "TO", "OF", "IS", "ON", "FOR"]) {
+          if (token.startsWith(prep + "KB") || token.startsWith(prep + "FAQ") || token.startsWith(prep + "DOC") || token.startsWith(prep + "KI") || token.startsWith(prep + "NEWS")) {
+            token = token.slice(prep.length);
+            break;
+          }
+        }
+        if (IGNORE_PREFIXES.some(prefix => token.startsWith(prefix))) continue;
+        if (mainDoc && token === mainDoc) continue;
+        if (!kbSubdocs.includes(token)) kbSubdocs.push(token);
+      }
+
+      // 4. Extract Patches (7 to 8 digits)
+      const patchRegex = /(?<!build=)(?<!BP:)(?<!B204P:)(?:(?<![A-Za-z0-9_.-])|(?<=\bBUG)|(?<=\bbug))(\d{7,8})(?:[A-Za-z*+!#~%^&|/\\?-]+)?(?!\.\d)(?![0-9_])/gi;
+      const patches = [];
+      let pMatch;
+      while ((pMatch = patchRegex.exec(text)) !== null) {
+        const num = pMatch[1];
+        if (mainDoc && mainDoc.endsWith(num)) continue;
+        if (kbSubdocs.some(kb => kb.endsWith(num))) continue;
+        if (!patches.includes(num)) patches.push(num);
+      }
+
+      const patchesFormatted = patches.length ? patches.join(', ') : 'None found';
+      const kbFormatted = kbSubdocs.length ? kbSubdocs.join('  ') : 'None found';
+      const mosList = Object.entries(mosCounts).map(([doc, c]) => `${doc}(${c})`);
+      const mosFormatted = mosList.length ? mosList.join(', ') : 'None found';
+      const mosUnique = Object.keys(mosCounts).length;
+      const mosTotal = Object.values(mosCounts).reduce((a, b) => a + b, 0);
+
+      const fullReport = 
+`Main Doc:\t${mainDoc || 'None identified'}
+Patches:\t${patchesFormatted}
+Sub Docs (KB):\t${kbFormatted}
+Sub Docs (MOS):\t${mosFormatted}
+
+Patches Count:\t\t${patches.length}
+Sub Docs (KB) Count:\t${kbSubdocs.length}
+Sub Docs (MOS) Count:\t${mosUnique}(${mosTotal})`;
+
+      return {
+        mainDoc: mainDoc || 'None identified',
+        patchesFormatted,
+        patchesCount: patches.length,
+        kbFormatted,
+        kbCount: kbSubdocs.length,
+        mosFormatted,
+        mosCountDisplay: `${mosUnique}(${mosTotal})`,
+        fullReport
+      };
+    }
+
+    // UI Wire-up
+    const inputText = document.getElementById('inputText');
+    const extractBtn = document.getElementById('extractBtn');
+    const pasteBtn = document.getElementById('pasteBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultsSection = document.getElementById('resultsSection');
+
+    const mainDocDisplay = document.getElementById('mainDocDisplay');
+    const patchesDisplay = document.getElementById('patchesDisplay');
+    const patchesCountBadge = document.getElementById('patchesCountBadge');
+    const kbDisplay = document.getElementById('kbDisplay');
+    const kbCountBadge = document.getElementById('kbCountBadge');
+    const mosDisplay = document.getElementById('mosDisplay');
+    const mosCountBadge = document.getElementById('mosCountBadge');
+    const rawReportDisplay = document.getElementById('rawReportDisplay');
+
+    let currentResults = null;
+
+    function renderResults(data) {
+      currentResults = data;
+      mainDocDisplay.textContent = data.mainDoc;
+      patchesDisplay.textContent = data.patchesFormatted;
+      patchesCountBadge.textContent = data.patchesCount;
+      kbDisplay.textContent = data.kbFormatted;
+      kbCountBadge.textContent = data.kbCount;
+      mosDisplay.textContent = data.mosFormatted;
+      mosCountBadge.textContent = data.mosCountDisplay;
+      rawReportDisplay.textContent = data.fullReport;
+
+      resultsSection.classList.remove('hidden');
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    extractBtn.addEventListener('click', () => {
+      const text = inputText.value;
+      if (!text.trim()) return;
+      const data = runHybridExtraction(text);
+      if (data) renderResults(data);
+    });
+
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const clip = await navigator.clipboard.readText();
+        if (clip) {
+          inputText.value = clip;
+          const data = runHybridExtraction(clip);
+          if (data) renderResults(data);
+          showToast('Pasted & Extracted!');
+        }
+      } catch (err) {
+        showToast('Please paste manually into box');
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      inputText.value = '';
+      resultsSection.classList.add('hidden');
+      currentResults = null;
+    });
+
+    // Copy Handlers
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2000);
+    }
+
+    function copyToClipboard(text, label) {
+      if (!text || text === 'None found' || text === 'None identified') {
+        showToast('Nothing to copy');
+        return;
+      }
+      navigator.clipboard.writeText(text);
+      showToast(`${label} copied!`);
+    }
+
+    document.getElementById('copyMainDocBtn').addEventListener('click', () => copyToClipboard(currentResults?.mainDoc, 'Main Doc'));
+    document.getElementById('copyPatchesBtn').addEventListener('click', () => copyToClipboard(currentResults?.patchesFormatted, 'Patches'));
+    document.getElementById('copyKbBtn').addEventListener('click', () => copyToClipboard(currentResults?.kbFormatted, 'Sub Docs (KB)'));
+    document.getElementById('copyMosBtn').addEventListener('click', () => copyToClipboard(currentResults?.mosFormatted, 'Sub Docs (MOS)'));
+    document.getElementById('copyAllBtn').addEventListener('click', () => copyToClipboard(currentResults?.fullReport, 'Full Report'));
+  </script>
+
+</body>
+</html>
